@@ -1,38 +1,68 @@
-cobra zsh-complete 模版
+/*
+Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 
-使用方法
-假定项目名称为 echoz
-0. 前期准备
-修改cmd/commondd/root.go 下面的rootCmd， 将Use改成对应的项目名称 "echoz"
-全局替换文件中的upx变成echoz 
-1. 构建对应的二进制文件
-go build ./cmd/commondd/main.go
-2. 将二进制文件修改成对应命令名字
-mv main echoz
-3. 使用命令生成对应的补全脚本
-./echoz completion zsh > echoza
-4. 激活脚本
-source ./echoza
-5. 使用
-临时使用
-./echoz \[tab\]\[tab\]
-长期使用,将下面的内容写入到zshrc中，然后source zshrc
-if [ $commands[qshell] ]; then
-  source <(qshell completion zsh)
-fi
+*/
+package cmd
 
+import (
+	"bytes"
+	"fmt"
+	"os"
 
+	"github.com/spf13/cobra"
+)
 
-Pass
-七牛的sdk对cobra组合方式封装一个builder，后期有机会可以补一补 
-另外生成的脚本文件并不只是适用于cobra的命令程序，如果你有实力或者时间，完全可以用其他的命令行工具去做
+var completionCmd = &cobra.Command{
+	Use:   "completion [bash|zsh|fish|powershell]",
+	Short: "Generate completion script",
+	Long: fmt.Sprintf(`To load completions:
 
-另外模版一共有四部分组成， 分别是头部 中部 和 尾部 还有自定义的部分
-其中头部和尾部的内容如下所示， 已经被写在了 cmd/commondd/completion.go 文件中
+Bash:
 
-头部 
-```go
-zsh_head := "#compdef upx\n"
+  $ source <(%[1]s completion bash)
+
+  # To load completions for each session, execute once:
+  # Linux:
+  $ %[1]s completion bash > /etc/bash_completion.d/%[1]s
+  # macOS:
+  $ %[1]s completion bash > $(brew --prefix)/etc/bash_completion.d/%[1]s
+
+Zsh:
+
+  # If shell completion is not already enabled in your environment,
+  # you will need to enable it.  You can execute the following once:
+
+  $ echo "autoload -U compinit; compinit" >> ~/.zshrc
+
+  # To load completions for each session, execute once:
+  $ %[1]s completion zsh > "${fpath[1]}/_%[1]s"
+
+  # You will need to start a new shell for this setup to take effect.
+
+fish:
+
+  $ %[1]s completion fish | source
+
+  # To load completions for each session, execute once:
+  $ %[1]s completion fish > ~/.config/fish/completions/%[1]s.fish
+
+PowerShell:
+
+  PS> %[1]s completion powershell | Out-String | Invoke-Expression
+
+  # To load completions for every new session, run:
+  PS> %[1]s completion powershell > %[1]s.ps1
+  # and source this file from your PowerShell profile.
+`, rootCmd.Root().Name()),
+	DisableFlagsInUseLine: true,
+	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+	Args:                  cobra.ExactValidArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		switch args[0] {
+		case "bash":
+			cmd.Root().GenBashCompletion(os.Stdout)
+		case "zsh":
+			zsh_head := "#compdef upx\n"
 			os.Stdout.Write([]byte(zsh_head))
 			zsh_initialization := `
 __upx_bash_source() {
@@ -159,10 +189,10 @@ __upx_convert_bash_to_zsh() {
 	-e "s/\\\$(type${RWORD}/\$(__upx_type/g" \
 	<<'BASH_COMPLETION_EOF'
 `
-```
-
-尾部
-```go
+			os.Stdout.Write([]byte(zsh_initialization))
+			buf := new(bytes.Buffer)
+			cmd.Root().GenBashCompletion(buf)
+			os.Stdout.Write(buf.Bytes())
 			tail := `
 BASH_COMPLETION_EOF
 }
@@ -170,77 +200,24 @@ __upx_bash_source <(__upx_convert_bash_to_zsh)
 _complete upx 2>/dev/null
 `
 			os.Stdout.Write([]byte(tail))
-```
-
-
-中部
-```go
-			buf := new(bytes.Buffer)
-			cmd.Root().GenBashCompletion(buf)
-			os.Stdout.Write(buf.Bytes())
-```
-其中GenBashCompletion生成的代码结构如下所示
-```bash
-_upx_root_command()
-{
-    last_command="upx"
-
-    command_aliases=()
-
-    commands=()
-    commands+=("completion") # 你加的命令
-    commands+=("config")
-    commands+=("help")
-    commands+=("web")
-
-    flags=()
-    two_word_flags=()
-    local_nonpersistent_flags=()
-    flags_with_completion=()
-    flags_completion=()
-
-    flags+=("--colorful") # 全局的flag
-    flags+=("--config=")
-    two_word_flags+=("--config")
-
-    must_have_one_flag=()
-    must_have_one_noun=()
-    noun_aliases=()
+		case "fish":
+			cmd.Root().GenFishCompletion(os.Stdout, true)
+		case "powershell":
+			cmd.Root().GenPowerShellCompletionWithDesc(os.Stdout)
+		}
+	},
 }
 
+func init() {
+	rootCmd.AddCommand(completionCmd)
 
-_upx_config() # 子命令
-{
-    last_command="upx_config"
+	// Here you will define your flags and configuration settings.
 
-    command_aliases=()
+	// Cobra supports Persistent Flags which will work for this command
+	// and all subcommands, e.g.:
+	// completionCmd.PersistentFlags().String("foo", "", "A help for foo")
 
-    commands=()
-    commands+=("create")
-
-    flags=()
-    two_word_flags=()
-    local_nonpersistent_flags=()
-    flags_with_completion=()
-    flags_completion=()
-
-    flags+=("--colorful") # 子命令的flag or 全局的flag
-    flags+=("--config=")
-    two_word_flags+=("--config")
-
-    must_have_one_flag=()
-    must_have_one_noun=()
-    must_have_one_noun+=("node")
-    must_have_one_noun+=("pod")
-    must_have_one_noun+=("replicationcontroller")
-    must_have_one_noun+=("service")
-    noun_aliases=()
+	// Cobra supports local flags which will only run when this command
+	// is called directly, e.g.:
+	// completionCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
-```
-
-
-另外自定义的部分，见 cmd/commands/root.go 文件 
-
-
-## base one
-https://github.com/qiniu/go-sdk
