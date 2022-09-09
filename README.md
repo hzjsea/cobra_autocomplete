@@ -6,20 +6,22 @@ cobra zsh-complete 模版
 修改cmd/commondd/root.go 下面的rootCmd， 将Use改成对应的项目名称 "echoz"
 全局替换文件中的upx变成echoz 
 1. 构建对应的二进制文件
-go build ./cmd/commondd/main.go
+**go build ./cmd/commondd/main.go**
 2. 将二进制文件修改成对应命令名字
-mv main echoz
+**mv main echoz**
 3. 使用命令生成对应的补全脚本
-./echoz completion zsh > echoza
+**./echoz completion zsh > echoza**
 4. 激活脚本
-source ./echoza
+**source ./echoz**
 5. 使用
 临时使用
-./echoz \[tab\]\[tab\]
-长期使用,将下面的内容写入到zshrc中，然后source zshrc
+**./echoz \[tab\]\[tab\]**
+长期使用,将下面的内容写入到zshrc中，然后**source zshrc**
+```bash 
 if [ $commands[qshell] ]; then
   source <(qshell completion zsh)
 fi
+```
 
 
 
